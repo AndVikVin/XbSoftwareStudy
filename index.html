@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../webix/codebase/webix.css" type="text/css">
+    <link rel="stylesheet" href="./index.css" type="text/css">
+    <script src="../webix/codebase/webix.js" type="text/javascript"></script>
+    <script type="text/javascript" src="../webix/samples/15_datatable/common/testdata.js"></script>
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        webix.ui({
+            view: "popup",
+            width:250, height:80,
+            id:"profilePopup",
+            body:{
+                view:'list',
+                scroll:false,
+                template:'#title#',
+                data:[
+                    {id:1, title:'Settings'},
+                    {id:2, title:'Log out'}
+                ],
+                select:true
+            }
+        });
+
+        const header = {   
+            css:"webix_header webix_dark",
+            paddingX:10,
+            cols:[
+                {   
+                    view:"label",
+                    css: "label",
+                    padding: 20, 
+                    label: "My App", 
+                    inputWidth:100, 
+                    align:"left"
+                },
+                {
+                view:"button", 
+                id:"profileButton",
+                padding: 30, 
+                popup:"profilePopup",
+                label:"Profile", 
+                type:"image",
+                image:"./humanPict.png", 
+                inputWidth:100,
+                align:"right"
+                }
+            ]
+        };
+
+        
+        const listCol = {
+            id:"listCol",
+            rows:[
+                {
+                    view:"list",
+                    template:"#title#",
+                    width:200,
+                    select:true,
+                    scroll:false,
+                    data:[
+                        { id:1, title:"Dashboard"},
+                        { id:2, title:"Users"},
+                        { id:3, title:"Products"},
+                        { id:4, title:"Locations"},                               
+                    ]
+                },
+                { 
+                    css:'greenText',
+                    template:"<img src='./connectionImg.png' alt='connected'>Connected",
+                    type:"clean",
+                    height:36,
+                }
+            ]
+        };
+
+        const dataTableCol = {
+            view:"datatable",
+            id:'filmTable',
+            autoConfig:true,
+            data:small_film_set,
+        }
+
+        function addDataToTable(){
+            let newFilm = $$('filmForm').getValues();
+            if($$('filmForm').validate()){
+                webix.message({
+                    text:'Successfull validation',
+                    type:"success"  
+                })
+                 $$('filmTable').add(newFilm);
+
+            }
+        }
+
+        function clear(){
+            webix.confirm({
+                title:'Clear form?',
+                ok:'Yes',
+                cancel:'No',
+                text:'Are you shure you whant to clear form?',
+                type:"confirm-warning",
+                callback:(result)=>{
+                    if(result === true){
+                        $$('filmForm').clear();
+                        $$('filmForm').clearValidation(); 
+                    }
+                }
+
+            })
+        }
+
+        const validationRules = {
+            title:webix.rules.isNotEmpty,
+                year:(value)=>{
+                    let date = new Date();
+                    let year = date.getFullYear();
+                    return 1970 <= value & value <= year;
+                },
+                votes: (value)=> value < 100000,
+                rating:(value)=>{
+                    //при такой записи return value !== 0 & webix.rules.isNotEmpty(value) не работало. Почему???
+                    return +value !== 0 & !!webix.rules.isNotEmpty(value)
+                }   
+        }
+
+        const formCol = {
+            rows:[
+                {
+                    type:"section",
+                    template:"EDIT FILMS"
+                },
+                {
+                    view:"form", 
+                    id:"filmForm",
+                    width:300,
+                    elements:[
+                        { view:"text", label:"Title", name:'title', invalidMessage:"Can't be empty"},
+                        { view:"text", label:"Year", name:'year', invalidMessage:'Must be from 1970 to 2019'},
+                        { view:"text", label:"Rating", name:'rating', invalidMessage:"Can't be empty or 0"},
+                        { view:"text", label:"Votes", name:'votes', invalidMessage:'Must be less then 100000'},                        
+                        { margin:5, cols:[
+                            { 
+                                view:"button", 
+                                type:"form", 
+                                value:"Add new",
+                                click:addDataToTable   
+                            },
+                            { view:"button", value:"Clear", click:clear}
+                        ]}
+                    ],
+                    rules:validationRules,
+                },
+                    {}
+            ]
+        }
+
+        webix.ready(()=>{
+            webix.ui({
+                rows:[
+                    header,
+                    {
+                        cols:[
+                            listCol,
+                            {view:"resizer"},
+                            dataTableCol,
+                            formCol
+                        ]
+                    },
+                    {
+                        css:"footer",
+                        height: 36,
+                        template: "This software is provided by <a href='https://webix.com', target='blank'>https://webix.com</a>. All rights reserved (c)"}
+        ]
+    })
+})
+    </script>
+</body>
+</html>
