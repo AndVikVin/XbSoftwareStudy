@@ -29,8 +29,9 @@
         });
 
         const header = {   
-            css:"webix_header webix_dark",
-            paddingX:10,
+            css:"webix_dark",
+            view: "toolbar",
+            id: "myToolbar",
             cols:[
                 {   
                     view:"label",
@@ -46,8 +47,8 @@
                 padding: 30, 
                 popup:"profilePopup",
                 label:"Profile", 
-                type:"image",
-                image:"./humanPict.png", 
+                type:"icon",
+                icon:"wxi-user", 
                 inputWidth:100,
                 align:"right"
                 }
@@ -58,22 +59,23 @@
         const listCol = {
             id:"listCol",
             rows:[
-                {
+                {   
+                    id:"selectList",
                     view:"list",
-                    template:"#title#",
                     width:200,
                     select:true,
                     scroll:false,
-                    data:[
-                        { id:1, title:"Dashboard"},
-                        { id:2, title:"Users"},
-                        { id:3, title:"Products"},
-                        { id:4, title:"Locations"},                               
-                    ]
+                    data:["Dashboard","User","Products","Admin"                          
+                    ],
+                    on:{
+                        onAfterSelect:(id)=>{
+                            $$(id).show();
+                        }
+                    }
                 },
                 { 
                     css:'greenText',
-                    template:"<img src='./connectionImg.png' alt='connected'>Connected",
+                    template:"<span class='webix_icon wxi-check'></span>Connected",
                     type:"clean",
                     height:36,
                 }
@@ -83,8 +85,24 @@
         const dataTableCol = {
             view:"datatable",
             id:'filmTable',
-            autoConfig:true,
-            data:small_film_set,
+            hover:"rowHover",
+            // Не разобрался почему не работает sort у колонок Votes,Rating и не работает filter у колонки Votes
+            columns:[
+                {id:"rank", header:"", sort:"int", width:60, css:"rankCol"},
+                {id:"title", header:["Title", {content:"textFilter"}], fillspace:true, sort:"string"},
+                {id:"year", header:["Year", {content:"numberFilter"}], sort:"int"},
+                {id:"votes", header:["Votes", {content:"numberFilter"}], sort:"int"},
+                {id:"rating", header:["Rating", {content:"numberFilter"}], sort:"int"},
+                {id:"delCol", header:"", template:"{common.trashIcon()}"}                
+            ],
+            onClick:{
+                // не понял внутреннюю реализацию. Как в данном случае webix использует объект события?
+                "wxi-trash":function(e,id){
+                    this.remove(id);
+                    return false                    
+                }
+            },
+            url:"../data/data.js"
         }
 
         function addDataToTable(){
@@ -121,12 +139,11 @@
                 year:(value)=>{
                     let date = new Date();
                     let year = date.getFullYear();
-                    return 1970 <= value & value <= year;
+                    return 1970 <= value && value <= year;
                 },
                 votes: (value)=> value < 100000,
                 rating:(value)=>{
-                    //при такой записи return value !== 0 & webix.rules.isNotEmpty(value) не работало. Почему???
-                    return +value !== 0 & !!webix.rules.isNotEmpty(value)
+                    return value != 0 
                 }   
         }
 
@@ -160,6 +177,104 @@
                     {}
             ]
         }
+        
+
+        const userList = {
+            view:"list",
+            id:"userList",
+            select:true,
+            template:"#name# from #country#<span class='webix_icon wxi-close delUser'></span>",
+            url:"../data/users.js",
+            onClick:{
+                "wxi-close":function(e,id){
+                    this.remove(id);
+                    return false
+                }
+            },
+            // Возможно есть более правильный способ стилизовать первые пять строк листа?
+            on:{
+                onAfterLoad:function(){
+                    $$("userList").data.getIndexRange(0,4).each(function(obj){
+                        obj.$css = "firstFive"
+                    });
+                },
+            }
+        }
+
+        const userToolbar = {
+            view:"toolbar",
+            id:"userToolbar",
+            elements:[
+                {
+                    view:"text",id:"userFilter", 
+                    on:{
+                        onTimedKeyPress:function(){
+                            let value = this.getValue().toLowerCase();
+                            $$("userList").filter(function(obj){
+                                return obj.name.toLowerCase().indexOf(value)!=-1
+                            });
+                        }
+                    }
+                },
+                {
+                    view:"button",id:"ascButton", label:"Sort asc", type:"form", gravity:0.3,
+                    click:function(){$$("userList").sort("#name#","asc","string")}
+                },
+                {
+                    view:"button",id:"descButton", label:"Sort desc", type:"form", gravity:0.3,
+                    click:function(){$$("userList").sort("#name#","desc","string")}
+                },
+            ]
+        }
+
+        const usersChart = {
+            view:"chart",
+            id:"usersChart",
+            type:"bar",
+            value:"#age#",
+            url:"../data/users.js",
+            xAxis:{
+                template:"#age#",
+                title:"Age2342344"
+            }
+        }
+
+        const productsTreeTable = {
+            view:"treetable",
+            id:"Products",
+            fillspace:true,
+            select:"cell",
+            columns:[
+                {id:"id", header:"", width:50},
+                {id:"title", header:"Products", template:"{common.treetable()} #title#", width:400},
+                {id:"price", header:"Price", width:80},                                
+            ],
+            url:"../data/products.js",
+            on:{
+                onAfterLoad:function(){
+                  $$("Products").openAll()
+                }
+            }
+            
+        }
+
+        const multiview = {
+            id:"multiview",
+            cells:[
+                {id:"Dashboard", cols:[
+                    dataTableCol, 
+                    formCol]
+                },
+                {id:"User", rows:[
+                        userToolbar,
+                        userList,
+                        usersChart
+                    
+                ]},
+                productsTreeTable,
+                {id:"Admin", template:"Admin"},                                                
+            ]
+        }
 
         webix.ready(()=>{
             webix.ui({
@@ -169,8 +284,7 @@
                         cols:[
                             listCol,
                             {view:"resizer"},
-                            dataTableCol,
-                            formCol
+                            multiview,                        
                         ]
                     },
                     {
@@ -179,6 +293,7 @@
                         template: "This software is provided by <a href='https://webix.com', target='blank'>https://webix.com</a>. All rights reserved (c)"}
         ]
     })
+    $$("selectList").select("Dashboard")
 })
     </script>
 </body>

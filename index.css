@@ -7,3 +7,20 @@
 .footer {
     padding-left: 35%;
 }
+
+.rankCol {
+    background-color: #F4F5F9;
+    text-align: center;
+}
+
+.rowHover {
+    background-color: rgb(160, 194, 194);
+}
+
+.delUser {
+    float:right;
+}
+
+.firstFive {
+    background-color: aquamarine;
+}
