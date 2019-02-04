@@ -86,7 +86,7 @@
             view:"datatable",
             id:'filmTable',
             hover:"rowHover",
-            // Не разобрался почему не работает sort у колонок Votes,Rating и не работает filter у колонки Votes
+            select:true,
             columns:[
                 {id:"rank", header:"", sort:"int", width:60, css:"rankCol"},
                 {id:"title", header:["Title", {content:"textFilter"}], fillspace:true, sort:"string"},
@@ -96,11 +96,16 @@
                 {id:"delCol", header:"", template:"{common.trashIcon()}"}                
             ],
             onClick:{
-                // не понял внутреннюю реализацию. Как в данном случае webix использует объект события?
                 "wxi-trash":function(e,id){
                     this.remove(id);
                     return false                    
                 }
+            },
+            on:{
+                onAfterSelect:function(id){
+                    const item = $$("filmTable").getItem(id);
+                    $$("filmForm").setValues(item);
+                },
             },
             url:"../data/data.js"
         }
@@ -112,8 +117,11 @@
                     text:'Successfull validation',
                     type:"success"  
                 })
-                 $$('filmTable').add(newFilm);
-
+                 if(newFilm.id){
+                     $$("filmTable").updateItem(newFilm.id,newFilm)
+                 } else {
+                     $$("filmTable").add(newFilm);
+                 }
             }
         }
 
@@ -191,7 +199,6 @@
                     return false
                 }
             },
-            // Возможно есть более правильный способ стилизовать первые пять строк листа?
             on:{
                 onAfterLoad:function(){
                     $$("userList").data.getIndexRange(0,4).each(function(obj){
@@ -235,7 +242,7 @@
             url:"../data/users.js",
             xAxis:{
                 template:"#age#",
-                title:"Age2342344"
+                title:"Age"
             }
         }
 
