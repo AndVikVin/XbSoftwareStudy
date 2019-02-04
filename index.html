@@ -82,15 +82,43 @@
             ]
         };
 
+        const category = new webix.DataCollection({
+            url:"../extra-js/categories.js"
+        });
+
+        const filmTabBar = {
+            view:"tabbar",
+            id:"filmTabBar",
+            value:"all",
+            options:[
+                {id:"all", value:"All"},
+                {id:"old", value:"Old"},
+                {id:"modern", value:"Modern"},
+                {id:"new", value:"New"},                
+            ],
+            on:{
+                onChange:function(){
+                    $$("filmTable").filterByAll();
+                }
+            }
+        }
+
         const dataTableCol = {
             view:"datatable",
             id:'filmTable',
             hover:"rowHover",
             select:true,
+            scheme:{
+                $init:function(obj){
+                   const randomeId = Math.floor(Math.random() * 4) + 1;
+                   obj.categoryid = randomeId;
+                }
+            },
             columns:[
                 {id:"rank", header:"", sort:"int", width:60, css:"rankCol"},
                 {id:"title", header:["Title", {content:"textFilter"}], fillspace:true, sort:"string"},
-                {id:"year", header:["Year", {content:"numberFilter"}], sort:"int"},
+                {id:"categoryid", header:["Category", {content:"textFilter"}], collection:category},
+                {id:"year", header:"Year", sort:"int"},
                 {id:"votes", header:["Votes", {content:"numberFilter"}], sort:"int"},
                 {id:"rating", header:["Rating", {content:"numberFilter"}], sort:"int"},
                 {id:"delCol", header:"", template:"{common.trashIcon()}"}                
@@ -102,26 +130,57 @@
                 }
             },
             on:{
-                onAfterSelect:function(id){
-                    const item = $$("filmTable").getItem(id);
-                    $$("filmForm").setValues(item);
+                onAfterSelect:function(){
+                    $$("filmForm").bind($$("filmTable"))
                 },
+                onAfterLoad:function(){
+                    this.registerFilter(
+                        ($$("filmTabBar")),
+                        {
+                            columnId:"year",
+                            compare:function(value,filter,item){
+                                if (filter == "old"){
+                                    return value < 2000
+                                } else if(filter == "modern"){
+                                    return value >= 2000 && value < 2019 
+                                } else  if(filter == "new"){
+                                    return value == 2019
+                                } else return value
+                            }
+                        },
+                        {
+                            getValue:function(node){
+                            return node.getValue()
+                            }
+                        },
+                        {
+                            setValue:function(node, value){
+                            node.setValue(value);
+                            }
+                        }
+                    )
+                }
+                // function(id){
+                //     const item = $$("filmTable").getItem(id);
+                //     $$("filmForm").setValues(item);
+                // },
             },
             url:"../data/data.js"
         }
 
         function addDataToTable(){
-            let newFilm = $$('filmForm').getValues();
+            // let newFilm = $$('filmForm').getValues();
             if($$('filmForm').validate()){
                 webix.message({
                     text:'Successfull validation',
                     type:"success"  
                 })
-                 if(newFilm.id){
-                     $$("filmTable").updateItem(newFilm.id,newFilm)
-                 } else {
-                     $$("filmTable").add(newFilm);
-                 }
+                //  if(newFilm.id){
+                //      $$("filmTable").updateItem(newFilm.id,newFilm)
+                //  } else {
+                //      $$("filmTable").add(newFilm);
+                //  }
+                   $$("filmForm").save(); 
             }
         }
 
@@ -135,7 +194,8 @@
                 callback:(result)=>{
                     if(result === true){
                         $$('filmForm').clear();
-                        $$('filmForm').clearValidation(); 
+                        $$('filmForm').clearValidation();
+                        $$("filmTable").unselect(); 
                     }
                 }
 
@@ -185,14 +245,29 @@
                     {}
             ]
         }
-        
+        webix.protoUI({
+            name:"userList"
+        }, webix.EditAbility, webix.ui.list)
 
         const userList = {
-            view:"list",
+            view:"userList",
             id:"userList",
+            editable:true,
+            editor:"text",
+            rules:{
+                "name":webix.rules.isNotEmpty
+            },            
+            editValue:"name",
             select:true,
             template:"#name# from #country#<span class='webix_icon wxi-close delUser'></span>",
             url:"../data/users.js",
+            scheme:{
+                $init:(obj)=>{
+                    if(obj.age < 26){
+                        obj.$css = 'toYoung';
+                    }
+                }
+            },
             onClick:{
                 "wxi-close":function(e,id){
                     this.remove(id);
@@ -201,13 +276,20 @@
             },
             on:{
                 onAfterLoad:function(){
-                    $$("userList").data.getIndexRange(0,4).each(function(obj){
-                        obj.$css = "firstFive"
-                    });
-                },
+                    $$("usersChart").sync(this,function(){
+                        // Can't set template for new chart.
+                        this.group({
+                            by:"country",
+                            map:{
+                                age:["country", "count"],
+                            }
+                        })
+                    })
+                }
             }
         }
-
+        const names = ["Alan","Jhon","Kate","Jim","Ann","Bob"];
+        const countries = ["USA","Canada","Spain","Germany","France","Italy"];
         const userToolbar = {
             view:"toolbar",
             id:"userToolbar",
@@ -231,6 +313,21 @@
                     view:"button",id:"descButton", label:"Sort desc", type:"form", gravity:0.3,
                     click:function(){$$("userList").sort("#name#","desc","string")}
                 },
+                {
+                    view:"button",id:"addButton", label:"Add new", type:"form", gravity:0.3,
+                    click:function(){
+                        const someAge = Math.floor(Math.random() * 90) + 1;
+                        const countryInd = Math.floor(Math.random() * 5) + 1;
+                        const nameId = Math.floor(Math.random() * 5) + 1;
+                        
+                        $$("userList").add({
+                            name:names[nameId],
+                            age:someAge,
+                            country:countries[countryInd]
+                        })
+
+                    }
+                },
             ]
         }
 
@@ -239,7 +336,6 @@
             id:"usersChart",
             type:"bar",
             value:"#age#",
-            url:"../data/users.js",
             xAxis:{
                 template:"#age#",
                 title:"Age"
@@ -250,13 +346,19 @@
             view:"treetable",
             id:"Products",
             fillspace:true,
+            editable:true,
+            editaction:"dblclick",
             select:"cell",
             columns:[
                 {id:"id", header:"", width:50},
-                {id:"title", header:"Products", template:"{common.treetable()} #title#", width:400},
-                {id:"price", header:"Price", width:80},                                
+                {id:"title", header:"Products", editor:"text", template:"{common.treetable()} #title#", width:400},
+                {id:"price", header:"Price", editor:"text", width:80},                                
             ],
             url:"../data/products.js",
+            rules:{
+                title:webix.rules.isNotEmpty,
+                price:webix.rules.isNotEmpty && webix.rules.isNumber
+            },
             on:{
                 onAfterLoad:function(){
                   $$("Products").openAll()
@@ -269,7 +371,10 @@
             id:"multiview",
             cells:[
                 {id:"Dashboard", cols:[
-                    dataTableCol, 
+                    {rows:[
+                        filmTabBar,
+                        dataTableCol,
+                    ]}, 
                     formCol]
                 },
                 {id:"User", rows:[
@@ -301,6 +406,7 @@
         ]
     })
     $$("selectList").select("Dashboard")
+    
 })
     </script>
 </body>
