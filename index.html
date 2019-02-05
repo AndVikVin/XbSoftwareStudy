@@ -12,6 +12,18 @@
 </head>
 <body>
     <script>
+        webix.protoUI({
+            name:"userList"
+        }, webix.EditAbility, webix.ui.list)
+
+        const category = new webix.DataCollection({
+            url:"../extra-js/categories.js"
+        });
+
+        const users = new webix.DataCollection({
+            url:"../data/users.js"
+        });
+
         webix.ui({
             view: "popup",
             width:250, height:80,
@@ -82,10 +94,6 @@
             ]
         };
 
-        const category = new webix.DataCollection({
-            url:"../extra-js/categories.js"
-        });
-
         const filmTabBar = {
             view:"tabbar",
             id:"filmTabBar",
@@ -112,6 +120,18 @@
                 $init:function(obj){
                    const randomeId = Math.floor(Math.random() * 4) + 1;
                    obj.categoryid = randomeId;
+                   const formatStr = (item)=>{
+                        const commaInd = item.indexOf(',');
+                        if(commaInd === -1){
+                            return item
+                        }
+                        let transArr = item.split('');
+                        transArr.splice(commaInd,1,'.');
+                        item = transArr.join('');
+                        return item
+                   }
+                   obj.votes = formatStr(obj.votes);
+                   obj.rating = formatStr(obj.rating);
                 }
             },
             columns:[
@@ -129,42 +149,15 @@
                     return false                    
                 }
             },
-            on:{
-                onAfterSelect:function(){
-                    $$("filmForm").bind($$("filmTable"))
-                },
-                onAfterLoad:function(){
-                    this.registerFilter(
-                        ($$("filmTabBar")),
-                        {
-                            columnId:"year",
-                            compare:function(value,filter,item){
-                                if (filter == "old"){
-                                    return value < 2000
-                                } else if(filter == "modern"){
-                                    return value >= 2000 && value < 2019 
-                                } else  if(filter == "new"){
-                                    return value == 2019
-                                } else return value
-                            }
-                        },
-                        {
-                            getValue:function(node){
-                            return node.getValue()
-                            }
-                        },
-                        {
-                            setValue:function(node, value){
-                            node.setValue(value);
-                            }
-                        }
-                    )
-                }
-                // function(id){
-                //     const item = $$("filmTable").getItem(id);
-                //     $$("filmForm").setValues(item);
-                // },
-            },
+            // on:{
+            //     onAfterSelect:function(){
+            //         $$("filmForm").bind($$("filmTable"))
+            //     },
+            //     // function(id){
+            //     //     const item = $$("filmTable").getItem(id);
+            //     //     $$("filmForm").setValues(item);
+            //     // },
+            // },
             url:"../data/data.js"
         }
 
@@ -184,6 +177,16 @@
             }
         }
 
+        function addDataToAdminTable(){
+            if($$('adminForm').validate()){
+                webix.message({
+                    text:'Successfull validation',
+                    type:"success"  
+                })
+                   $$("adminForm").save(); 
+            }
+        }
+
         function clear(){
             webix.confirm({
                 title:'Clear form?',
@@ -196,6 +199,24 @@
                         $$('filmForm').clear();
                         $$('filmForm').clearValidation();
                         $$("filmTable").unselect(); 
+                    }
+                }
+
+            })
+        }
+
+        function clearAdminForm(){
+            webix.confirm({
+                title:'Clear form?',
+                ok:'Yes',
+                cancel:'No',
+                text:'Are you shure you whant to clear form?',
+                type:"confirm-warning",
+                callback:(result)=>{
+                    if(result === true){
+                        $$('adminForm').clear();
+                        $$('adminForm').clearValidation();
+                        $$("adminTable").unselect(); 
                     }
                 }
 
@@ -226,6 +247,7 @@
                     id:"filmForm",
                     width:300,
                     elements:[
+                        {view:"richselect", label:"Categories", options:category},
                         { view:"text", label:"Title", name:'title', invalidMessage:"Can't be empty"},
                         { view:"text", label:"Year", name:'year', invalidMessage:'Must be from 1970 to 2019'},
                         { view:"text", label:"Rating", name:'rating', invalidMessage:"Can't be empty or 0"},
@@ -245,9 +267,6 @@
                     {}
             ]
         }
-        webix.protoUI({
-            name:"userList"
-        }, webix.EditAbility, webix.ui.list)
 
         const userList = {
             view:"userList",
@@ -260,7 +279,6 @@
             editValue:"name",
             select:true,
             template:"#name# from #country#<span class='webix_icon wxi-close delUser'></span>",
-            url:"../data/users.js",
             scheme:{
                 $init:(obj)=>{
                     if(obj.age < 26){
@@ -270,23 +288,10 @@
             },
             onClick:{
                 "wxi-close":function(e,id){
-                    this.remove(id);
+                    users.remove(id)
                     return false
                 }
             },
-            on:{
-                onAfterLoad:function(){
-                    $$("usersChart").sync(this,function(){
-                        // Can't set template for new chart.
-                        this.group({
-                            by:"country",
-                            map:{
-                                age:["country", "count"],
-                            }
-                        })
-                    })
-                }
-            }
         }
         const names = ["Alan","Jhon","Kate","Jim","Ann","Bob"];
         const countries = ["USA","Canada","Spain","Germany","France","Italy"];
@@ -320,7 +325,7 @@
                         const countryInd = Math.floor(Math.random() * 5) + 1;
                         const nameId = Math.floor(Math.random() * 5) + 1;
                         
-                        $$("userList").add({
+                        users.add({
                             name:names[nameId],
                             age:someAge,
                             country:countries[countryInd]
@@ -337,9 +342,10 @@
             type:"bar",
             value:"#age#",
             xAxis:{
-                template:"#age#",
-                title:"Age"
-            }
+                template:"#country#",
+                title:"Country"
+            },
+            yAxis:{}
         }
 
         const productsTreeTable = {
@@ -366,6 +372,52 @@
             }
             
         }
+    // Didn't understand how to set correct ID for new element
+        const adminTable = {
+            view:"datatable",
+            id:"adminTable",
+            select:true,
+            columns:[
+                {id:"value",header:'Category', fillspace:true},
+                {id:"delCol", header:"", template:"{common.trashIcon()}"} 
+            ],
+            onClick:{
+                "wxi-trash":function(e,id){
+                    category.remove(id);
+                    return false                    
+                }
+            }
+        }
+
+        const adminForm = {
+            rows:[
+                {
+                    type:"section",
+                    template:"EDIT Categories"
+                },
+                {
+                    view:"form", 
+                    id:"adminForm",
+                    width:300,
+                    elements:[
+                        { view:"text", label:"category", name:'value', invalidMessage:"Can't be empty"},                      
+                        { margin:5, cols:[
+                            { 
+                                view:"button", 
+                                type:"form", 
+                                value:"Add new",
+                                click:addDataToAdminTable   
+                            },
+                            { view:"button", value:"Clear", click:clearAdminForm}
+                        ]}
+                    ],
+                    rules:{
+                        value:webix.rules.isNotEmpty
+                    }
+                },
+                    {}
+            ]
+        }
 
         const multiview = {
             id:"multiview",
@@ -384,7 +436,10 @@
                     
                 ]},
                 productsTreeTable,
-                {id:"Admin", template:"Admin"},                                                
+                {id:"Admin", cols:[
+                    adminTable,
+                    adminForm
+                ]},                                                
             ]
         }
 
@@ -405,8 +460,41 @@
                         template: "This software is provided by <a href='https://webix.com', target='blank'>https://webix.com</a>. All rights reserved (c)"}
         ]
     })
+    $$("userList").sync(users)
+    $$("filmForm").bind($$("filmTable"))
+    $$("adminForm").bind($$("adminTable"))
     $$("selectList").select("Dashboard")
-    
+    $$("usersChart").sync(users,function(){
+        this.group({
+            by:"country",
+            map:{
+                    age:["country", "count"],
+            }
+        })
+    });
+    $$("filmTable").registerFilter(
+        ($$("filmTabBar")),{
+            columnId:"year",
+            compare:function(value,filter,item){
+                if (filter == "old"){
+                    return value < 2000
+                } else if(filter == "modern"){
+                    return value >= 2000 && value < 2019 
+                } else  if(filter == "new"){
+                    return value == 2019
+                } else return value
+            }
+        },
+        {
+            getValue:function(node){
+            return node.getValue()}
+        },
+        {
+            setValue:function(node, value){
+            node.setValue(value);}
+        }
+    )
+    $$("adminTable").sync(category);
 })
     </script>
 </body>
