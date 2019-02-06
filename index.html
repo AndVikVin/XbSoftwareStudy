@@ -120,18 +120,22 @@
                 $init:function(obj){
                    const randomeId = Math.floor(Math.random() * 4) + 1;
                    obj.categoryid = randomeId;
-                   const formatStr = (item)=>{
-                        const commaInd = item.indexOf(',');
-                        if(commaInd === -1){
-                            return item
-                        }
-                        let transArr = item.split('');
-                        transArr.splice(commaInd,1,'.');
-                        item = transArr.join('');
-                        return item
-                   }
-                   obj.votes = formatStr(obj.votes);
-                   obj.rating = formatStr(obj.rating);
+                //    console.log(parseFloat(obj.votes.replace(",", ".")))
+                   obj.votes = parseFloat(obj.votes.replace(",", "."))
+                   obj.rating = parseFloat(obj.rating.replace(",", "."))
+                //    const formatStr = (item)=>{
+                        
+                //         const commaInd = item.indexOf(',');
+                //         if(commaInd === -1){
+                //             return item
+                //         }
+                //         let transArr = item.split('');
+                //         transArr.splice(commaInd,1,'.');
+                //         item = transArr.join('');
+                //         return item
+                //    }
+                //    obj.votes = formatStr(obj.votes);
+                //    obj.rating = formatStr(obj.rating);
                 }
             },
             columns:[
