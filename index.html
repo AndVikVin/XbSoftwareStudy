@@ -178,12 +178,13 @@
         }
 
         function addDataToAdminTable(){
+            let newCategory = $$("adminForm").getValues();
             if($$('adminForm').validate()){
                 webix.message({
                     text:'Successfull validation',
                     type:"success"  
                 })
-                   $$("adminForm").save(); 
+                   category.add(newCategory); 
             }
         }
 
@@ -372,7 +373,6 @@
             }
             
         }
-    // Didn't understand how to set correct ID for new element
         const adminTable = {
             view:"datatable",
             id:"adminTable",
